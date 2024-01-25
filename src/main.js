@@ -84,7 +84,10 @@ const parseCommands = function *(view, { commandOffset, eofOffset, loopOffset, l
 			}
 		}
 
-		if (cmdLength === -2) {
+
+		const _cursor = cursor
+
+		if (cmd === 0x67) {
 			cursor += 6
 			if (cursor >= eofOffset) throw new RangeError('Unexpected end of VGM datablock')
 
@@ -94,14 +97,13 @@ const parseCommands = function *(view, { commandOffset, eofOffset, loopOffset, l
 			const cursorNext = cursor + dataLength
 			if (cursorNext >= eofOffset) throw new RangeError('Unexpected end of VGM datablock')
 
-			const data = new Uint8Array(view.buffer, cursor, dataLength)
+			const data = new Uint8Array(view.buffer, _cursor, dataLength + 6)
 
 			const ret = { cmd, type, data }
 			yield ret
 
 			cursor = cursorNext
 		} else {
-			const _cursor = cursor
 			const ret = { cmd }
 			if (cmdLength > 0) {
 				const cursorNext = cursor + 1 + cmdLength
