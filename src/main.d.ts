@@ -1,7 +1,8 @@
 import { TinyVGMHeaderField, TinyVGMMetadataType } from './header'
 
 export interface TinyVGMContext {
-	loop: boolean
+	loopCount: number
+	hasLoop: boolean
 	skipUnknownCommand: boolean
 	header: Generator<{ type: TinyVGMHeaderField; data: number }>
 	metadata: Generator<{ type: TinyVGMMetadataType; data: Uint8Array }> | null
@@ -9,7 +10,7 @@ export interface TinyVGMContext {
 }
 
 export interface ParseOptions {
-	loop?: boolean
+	loopCount?: number
 	skipUnknownCommand?: boolean
 }
 

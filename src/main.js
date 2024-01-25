@@ -11,6 +11,7 @@ const HEADER_GD3_OFFSET = TinyVGMHeaderField.GD3_Offset * 4
 const HEADER_DAT_OFFSET = TinyVGMHeaderField.Data_Offset * 4
 const HEADER_LOOP_OFFSET = TinyVGMHeaderField.Loop_Offset * 4
 const HEADER_LOOP_SAMPLES = TinyVGMHeaderField.Loop_Samples * 4
+const HEADER_TOTAL_SAMPLES = TinyVGMHeaderField.Total_Samples * 4
 
 const parseHeader = function *(view, end) {
 	let type = TinyVGMHeaderField.EoF_Offset
@@ -59,6 +60,7 @@ const parseMetadata = function *(view, startOffset) {
 	}
 }
 
+// eslint-disable-next-line complexity
 const parseCommands = function *(view, { commandOffset, eofOffset, loopOffset, loopSamples }, ctx) {
 	let cursor = commandOffset
 
@@ -113,7 +115,7 @@ const parseCommands = function *(view, { commandOffset, eofOffset, loopOffset, l
 				cursor += 1
 			}
 
-			if (_cursor >= loopOffset) {
+			if (loopSamples && _cursor >= loopOffset) {
 				switch (cmd) {
 					case 0x61: {
 						loopSamplesCount += ret.data[0] + ret.data[1] << 8
@@ -137,9 +139,12 @@ const parseCommands = function *(view, { commandOffset, eofOffset, loopOffset, l
 					}
 				}
 
-				if (ctx.loop && loopSamplesCount >= loopSamples) {
-					cursor = loopOffset
+				if (loopSamplesCount >= loopSamples) {
 					loopSamplesCount = 0
+					if (ctx.loopCount > 0) {
+						cursor = loopOffset
+						ctx.loopCount -= 1
+					}
 				}
 			}
 
@@ -185,7 +190,7 @@ export const parseVGM = (buf, options = {}) => {
 	// Handle malformed loop offset for files from some VGM generators
 	if (loopOffset >= eofOffset) loopOffset = 0
 
-	const loopSamples = vgmView.getUint32(HEADER_LOOP_SAMPLES, true)
+	const loopSamples = vgmView.getUint32(HEADER_LOOP_SAMPLES, true) || vgmView.getUint32(HEADER_TOTAL_SAMPLES, true)
 
 	let commandOffset = 0x40
 
@@ -199,10 +204,13 @@ export const parseVGM = (buf, options = {}) => {
 	}
 
 	const ctx = {
-		loop: false,
+		loopCount: 0,
+		hasLoop: !!loopOffset,
 		skipUnknownCommand: false,
 		...options
 	}
+
+	if (!loopOffset) loopOffset = commandOffset
 
 	ctx.header = parseHeader(vgmView, headerSize)
 	ctx.metadata = gd3Offset && parseMetadata(vgmView, gd3Offset) || null

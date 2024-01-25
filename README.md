@@ -48,7 +48,8 @@ for (const command of context.commands) {
 
 The context object returned by the `parseVGM` function, containing parsed data from the VGM file.
 
-- **loop**: Indicates whether to loop the playback. _Change this value to enable or disable loop while playing._
+- **loopCount**: Indicates how many times left to loop the playback. _Change this value to `0` to disable loop while playing._
+- **hasLoop**: Indicates whether the VGM file contains loop.
 - **skipUnknownCommand**: Indicates whether to skip unknown commands during parsing.
 - **header**: Generator yielding header information.
 - **metadata**: Generator yielding metadata, or `null` if not present.
@@ -58,8 +59,12 @@ The context object returned by the `parseVGM` function, containing parsed data f
 
 Options for parsing the VGM file.
 
-- **loop**: Optional. Whether to loop the playback.
+- **loopCount**: Optional. How many times to loop the playback. Set `Infinity` to loop indefinitely.
 - **skipUnknownCommand**: Optional. Whether to skip unknown commands during parsing.
+
+#### Note:
+
+- If the VGM file does not contain loop by default, the whole song will be looped if `loopCount` is set.
 
 ### `parseVGM(buffer: ArrayBuffer | DataView, options?: ParseOptions): TinyVGMContext`
 

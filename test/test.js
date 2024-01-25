@@ -1,7 +1,7 @@
 import fs from 'fs'
 import { parseVGM } from '../src/main.js'
 
-const readVGMFile = (filePath) => {
+const readVGMFile = (filePath, loopCount) => {
 	fs.readFile(filePath, (err, buffer) => {
 		if (err) {
 			console.error('Error reading file:', err)
@@ -9,7 +9,9 @@ const readVGMFile = (filePath) => {
 		}
 
 		try {
-			const context = parseVGM(buffer)
+			const context = parseVGM(buffer, {
+				loopCount
+			})
 
 			// Example: Displaying header information
 			for (const field of context.header) {
@@ -24,7 +26,7 @@ const readVGMFile = (filePath) => {
 			}
 
 			for (const command of context.commands) {
-				console.log(`Command: 0x${command.cmd.toString(16).padStart(2, '0')} Data:`, command.data && [...command.data].map(i => `0x${i.toString(16).padStart(2, '0')}`).join(' '))
+				console.log(`Loops left: ${context.loopCount} Command: 0x${command.cmd.toString(16).padStart(2, '0')} Data:`, command.data && [...command.data].map(i => `0x${i.toString(16).padStart(2, '0')}`).join(' '))
 			}
 
 			// Add more processing as needed
@@ -38,8 +40,9 @@ const readVGMFile = (filePath) => {
 const args = process.argv.slice(2)
 
 if (args.length === 0) {
-	console.log('Usage: node testProgram.js <path-to-vgm-file>')
+	console.log('Usage: node testProgram.js <path-to-vgm-file> [loop-count]')
 } else {
 	const filePath = args[0]
-	readVGMFile(filePath)
+	const loopCount = args[1]
+	readVGMFile(filePath, loopCount === 'Infinity' && Infinity || parseInt(loopCount, 10) || 0)
 }
