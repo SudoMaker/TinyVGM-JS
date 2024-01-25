@@ -13,20 +13,32 @@ const readVGMFile = (filePath, loopCount) => {
 				loopCount
 			})
 
+			console.log('Context:', context)
+
 			// Example: Displaying header information
 			for (const field of context.header) {
-				console.log(`Header Field: 0x${(field.type * 4).toString(16)}, Value: 0x${field.data.toString(16)}`)
+				console.log(`Header Field: 0x${(field.type * 4).toString(16).padStart(2, '0')}, Value: 0x${field.data.toString(16).padStart(8, '0')}`)
 			}
 
 			if (context.metadata) {
 				for (const metaField of context.metadata) {
 					const text = new TextDecoder('utf-16le').decode(metaField.data)
-					console.log(`Metadata Type: 0x${metaField.type.toString(16)}, Value: ${text}`)
+					console.log(`Metadata Type: 0x${metaField.type.toString(16).padStart(2, '0')}, Value: ${text}`)
 				}
 			}
 
+			let lastLoopCount = loopCount
+
 			for (const command of context.commands) {
-				console.log(`Loops left: ${context.loopCount} Command: 0x${command.cmd.toString(16).padStart(2, '0')} Data:`, command.data && [...command.data].map(i => `0x${i.toString(16).padStart(2, '0')}`).join(' '))
+				if (context.loopCount !== lastLoopCount) {
+					console.log('Looped! Loops left:', context.loopCount)
+					lastLoopCount = context.loopCount
+				}
+				if (command.cmd === 0x67) {
+					console.log(`DataBlock: 0x${command.type.toString(16).padStart(2, '0')}`, command.data)
+				} else {
+					console.log(`Command: 0x${command.cmd.toString(16).padStart(2, '0')} Data:`, command.data && [...command.data].map(i => `0x${i.toString(16).padStart(2, '0')}`).join(' '))
+				}
 			}
 
 			// Add more processing as needed
