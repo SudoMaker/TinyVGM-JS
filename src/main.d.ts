@@ -1,6 +1,7 @@
 import { TinyVGMHeaderField, TinyVGMMetadataType } from './header'
 
 export interface TinyVGMContext {
+	version: number
 	loopCount: number
 	hasLoop: boolean
 	totalSamples: number

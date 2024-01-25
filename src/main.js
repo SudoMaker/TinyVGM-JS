@@ -207,6 +207,7 @@ export const parseVGM = (buf, options = {}) => {
 	}
 
 	const ctx = {
+		version,
 		loopCount: 0,
 		hasLoop: !!loopOffset,
 		totalSamples,

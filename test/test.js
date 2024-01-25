@@ -1,7 +1,7 @@
 import fs from 'fs'
 import { parseVGM } from '../src/main.js'
 
-const readVGMFile = (filePath, loopCount) => {
+const readVGMFile = (filePath, _loopCount) => {
 	fs.readFile(filePath, (err, buffer) => {
 		if (err) {
 			console.error('Error reading file:', err)
@@ -10,10 +10,12 @@ const readVGMFile = (filePath, loopCount) => {
 
 		try {
 			const context = parseVGM(buffer, {
-				loopCount
+				loopCount: _loopCount
 			})
 
-			console.log('Context:', context)
+			const { version, loopCount, hasLoop, totalSamples, loopSamples } = context
+
+			console.log('Context:', { version: version.toString(16).padStart(8, '0'), loopCount, hasLoop, totalSamples, loopSamples })
 
 			// Example: Displaying header information
 			for (const field of context.header) {
