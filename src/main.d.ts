@@ -3,6 +3,8 @@ import { TinyVGMHeaderField, TinyVGMMetadataType } from './header'
 export interface TinyVGMContext {
 	loopCount: number
 	hasLoop: boolean
+	totalSamples: number
+	loopSamples: number
 	skipUnknownCommand: boolean
 	header: Generator<{ type: TinyVGMHeaderField; data: number }>
 	metadata: Generator<{ type: TinyVGMMetadataType; data: Uint8Array }> | null

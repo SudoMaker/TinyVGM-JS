@@ -50,6 +50,8 @@ The context object returned by the `parseVGM` function, containing parsed data f
 
 - **loopCount**: Indicates how many times left to loop the playback. _Change this value to `0` to disable loop while playing._
 - **hasLoop**: Indicates whether the VGM file contains loop.
+- **totalSamples**: Total sample count of the VGM file. One sample is 1/44100 seconds.
+- **loopSamples**: Looped sample count of the VGM file. One sample is 1/44100 seconds.
 - **skipUnknownCommand**: Indicates whether to skip unknown commands during parsing.
 - **header**: Generator yielding header information.
 - **metadata**: Generator yielding metadata, or `null` if not present.

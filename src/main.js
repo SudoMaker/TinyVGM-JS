@@ -185,12 +185,13 @@ export const parseVGM = (buf, options = {}) => {
 	}
 
 	const gd3Offset = vgmView.getUint32(HEADER_GD3_OFFSET, true) + HEADER_GD3_OFFSET
+	const totalSamples = vgmView.getUint32(HEADER_TOTAL_SAMPLES, true)
 
 	let loopOffset = vgmView.getUint32(HEADER_LOOP_OFFSET, true) + HEADER_LOOP_OFFSET
 	// Handle malformed loop offset for files from some VGM generators
 	if (loopOffset >= eofOffset) loopOffset = 0
 
-	const loopSamples = vgmView.getUint32(HEADER_LOOP_SAMPLES, true) || vgmView.getUint32(HEADER_TOTAL_SAMPLES, true)
+	let loopSamples = vgmView.getUint32(HEADER_LOOP_SAMPLES, true)
 
 	let commandOffset = 0x40
 
@@ -206,11 +207,16 @@ export const parseVGM = (buf, options = {}) => {
 	const ctx = {
 		loopCount: 0,
 		hasLoop: !!loopOffset,
+		totalSamples,
+		loopSamples,
 		skipUnknownCommand: false,
 		...options
 	}
 
-	if (!loopOffset) loopOffset = commandOffset
+	if (!loopOffset) {
+		loopOffset = commandOffset
+		loopSamples = totalSamples
+	}
 
 	ctx.header = parseHeader(vgmView, headerSize)
 	ctx.metadata = gd3Offset && parseMetadata(vgmView, gd3Offset) || null
