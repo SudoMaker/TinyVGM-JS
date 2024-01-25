@@ -1,0 +1,22 @@
+{
+  "name": "tinyvgm",
+  "version": "1.0.1",
+  "description": "JS implementation of TinyVGM",
+  "main": "src/main.js",
+  "type": "module",
+  "scripts": {},
+  "keywords": [
+    "VGM",
+    "parser",
+    "video game music",
+    "music"
+  ],
+  "files": [
+    "src"
+  ],
+  "repository": "SudoMaker/TinyVGM-JS",
+  "author": "Yukino Song <yukino@yuki.network>",
+  "license": "MIT",
+  "bugs": "https://github.com/SudoMaker/TinyVGM-JS/issues",
+  "homepage": "https://github.com/SudoMaker/TinyVGM-JS"
+}
