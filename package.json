@@ -14,7 +14,10 @@
   "files": [
     "src"
   ],
-  "repository": "SudoMaker/TinyVGM-JS",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SudoMaker/TinyVGM-JS.git"
+  },
   "author": "Yukino Song <yukino@yuki.network>",
   "license": "MIT",
   "bugs": "https://github.com/SudoMaker/TinyVGM-JS/issues",
