@@ -93,7 +93,10 @@ const parseMetadata = function *(view, startOffset) {
 	let type = TinyVGMMetadataType.Title_EN
 
 	while (cursor < end) {
-		if (type >= TinyVGMMetadataType.MAX) throw new TypeError(`Unkonwn VGM GD3 metadata type: 0x${type.toString(16).padStart(2, '0')}`)
+		if (type >= TinyVGMMetadataType.MAX) {
+			if (view.getUint16(cursor, true)) throw new TypeError(`Unkonwn VGM GD3 metadata type: 0x${type.toString(16).padStart(2, '0')}`)
+			return
+		}
 
 		let readLength = 0
 		while (view.getUint16(cursor + readLength, true)) {
