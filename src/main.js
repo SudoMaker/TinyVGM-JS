@@ -171,7 +171,7 @@ const parseCommands = function *(view, { commandOffset, eofOffset, loopOffset, l
 			if (loopSamples && _cursor >= loopOffset) {
 				switch (cmd) {
 					case 0x61: {
-						loopSamplesCount += ret.data[0] + ret.data[1] << 8
+						loopSamplesCount += ret.data[0] | (ret.data[1] << 8)
 						break
 					}
 					case 0x62: {
@@ -184,16 +184,15 @@ const parseCommands = function *(view, { commandOffset, eofOffset, loopOffset, l
 					}
 					default: {
 						// eslint-disable-next-line max-depth
-						if (cmd >= 0x70 && cmd < 0x80) {
-							loopSamplesCount += cmd - 0x6F
-						} else if (cmd >= 0x80 && cmd < 0x90) {
-							loopSamplesCount += cmd - 0x7F
+						if (cmd >= 0x70 && cmd < 0x90) {
+							loopSamplesCount += (cmd & 0x0F) + 1
 						}
 					}
 				}
 
 				if (loopSamplesCount >= loopSamples) {
 					loopSamplesCount = 0
+					// eslint-disable-next-line max-depth
 					if (ctx.loopCount > 0) {
 						cursor = loopOffset
 						ctx.loopCount -= 1
