@@ -63,6 +63,8 @@ The context object returned by the `parseVGM` function, containing parsed data f
 - **extraHeader**: Extra header information, if available.
 - **metadata**: Generator for metadata, or null if not available.
 - **commands**: Generator for command data.
+- **onLoop**: Function called when a loop point is reached, with the remaining loop count as a parameter.
+
 
 ### `ParseOptions`
 
@@ -70,6 +72,7 @@ Options for parsing the VGM file.
 
 - **loopCount**: Optional. How many times to loop the playback. Set `Infinity` to loop indefinitely.
 - **skipUnknownCommand**: Optional. Whether to skip unknown commands during parsing.
+- **onLoop**: Optional. Function to be called when a loop point is reached, with the remaining loop count as a parameter.
 
 #### Note:
 
@@ -177,6 +180,7 @@ for (const command of commands) {
 
 #### Notes:
 
+- VGZ files should be decompressed before passing to `parseVGM`.
 - The usage of these generators assumes that you have already loaded a VGM file into an `ArrayBuffer` named `vgmBuffer`.
 - The generators yield data lazily, meaning they only process parts of the VGM file as you iterate over them. This can be efficient for large files.
 - The `metadata` generator is optional and will only be present if the GD3 tag is found in the VGM file.

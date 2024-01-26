@@ -1,4 +1,5 @@
 import fs from 'fs'
+import { gunzipSync } from 'zlib'
 import { parseVGM } from '../src/main.js'
 
 const readVGMFile = (filePath, _loopCount) => {
@@ -8,18 +9,35 @@ const readVGMFile = (filePath, _loopCount) => {
 			return
 		}
 
+		if (buffer[0] === 0x1f && buffer[1] === 0x8b) {
+			buffer = gunzipSync(buffer)
+		}
+
 		try {
 			const context = parseVGM(buffer, {
-				loopCount: _loopCount
+				loopCount: _loopCount,
+				onLoop(count) {
+					console.log('Looped! Loops left:', count)
+				}
 			})
 
 			const { version, loopCount, hasLoop, totalSamples, loopSamples } = context
 
-			console.log('Context:', { version: version.toString(16).padStart(8, '0'), loopCount, hasLoop, totalSamples, loopSamples })
+			console.log('Context:', {
+				version: version.toString(16).padStart(8, '0'),
+				loopCount,
+				hasLoop,
+				totalSamples,
+				loopSamples
+			})
 
 			// Example: Displaying header information
 			for (const field of context.header) {
-				console.log(`Header Field: 0x${(field.type * 4).toString(16).padStart(2, '0')}, Value: 0x${field.data.toString(16).padStart(8, '0')}`)
+				console.log(
+					`Header Field: 0x${(field.type * 4).toString(16).padStart(2, '0')}, Value: 0x${field.data
+						.toString(16)
+						.padStart(8, '0')}`
+				)
 			}
 
 			// Displaying extra header information, if available
@@ -34,17 +52,14 @@ const readVGMFile = (filePath, _loopCount) => {
 				}
 			}
 
-			let lastLoopCount = loopCount
-
 			for (const command of context.commands) {
-				if (context.loopCount !== lastLoopCount) {
-					console.log('Looped! Loops left:', context.loopCount)
-					lastLoopCount = context.loopCount
-				}
 				if (command.cmd === 0x67) {
 					console.log(`DataBlock: 0x${command.type.toString(16).padStart(2, '0')}`, command.data)
 				} else {
-					console.log(`Command: 0x${command.cmd.toString(16).padStart(2, '0')} Data:`, command.data && [...command.data].map(i => `0x${i.toString(16).padStart(2, '0')}`).join(' '))
+					// console.log(
+					// 	`Command: 0x${command.cmd.toString(16).padStart(2, '0')} Data:`,
+					// 	command.data && [...command.data].map((i) => `0x${i.toString(16).padStart(2, '0')}`).join(' ')
+					// )
 				}
 			}
 
@@ -59,9 +74,9 @@ const readVGMFile = (filePath, _loopCount) => {
 const args = process.argv.slice(2)
 
 if (args.length === 0) {
-	console.log('Usage: node testProgram.js <path-to-vgm-file> [loop-count]')
+	console.log(`Usage: ${process.argv[0]} ${process.argv[1]} <path-to-vgm-file> [loop-count]`)
 } else {
 	const filePath = args[0]
 	const loopCount = args[1]
-	readVGMFile(filePath, loopCount === 'Infinity' && Infinity || parseInt(loopCount, 10) || 0)
+	readVGMFile(filePath, (loopCount === 'Infinity' && Infinity) || parseInt(loopCount, 10) || 0)
 }

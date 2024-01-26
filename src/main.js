@@ -196,6 +196,8 @@ const parseCommands = function *(view, { commandOffset, eofOffset, loopOffset, l
 					if (ctx.loopCount > 0) {
 						cursor = loopOffset
 						ctx.loopCount -= 1
+						// eslint-disable-next-line max-depth
+						if (ctx.onLoop) ctx.onLoop(ctx.loopCount)
 					}
 				}
 			}

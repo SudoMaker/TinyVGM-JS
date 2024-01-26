@@ -12,6 +12,7 @@ export interface TinyVGMContext {
 	totalSamples: number
 	loopSamples: number
 	skipUnknownCommand: boolean
+	onLoop?: (remainingLoops: number) => void
 	header: Generator<{ type: TinyVGMHeaderField; data: number }>
 	extraHeader: TinyVGMExtraHeader | null
 	metadata: Generator<{ type: TinyVGMMetadataType; data: Uint8Array }> | null
@@ -21,6 +22,7 @@ export interface TinyVGMContext {
 export interface ParseOptions {
 	loopCount?: number
 	skipUnknownCommand?: boolean
+	onLoop?: (remainingLoops: number) => void
 }
 
 export function parseVGM(buf: ArrayBuffer | DataView, options?: ParseOptions): TinyVGMContext
