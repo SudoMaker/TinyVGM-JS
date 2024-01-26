@@ -27,6 +27,11 @@ for (const field of context.header) {
 	console.log(`Header Field: ${field.type}, Value: ${field.data}`)
 }
 
+// Displaying extra header information, if available
+if (context.extraHeader) {
+	console.log('Extra Header:', context.extraHeader)
+}
+
 if (context.metadata) {
 	for (const metaField of context.metadata) {
 		const text = new TextDecoder('utf-16le').decode(metaField.data)
@@ -48,15 +53,16 @@ for (const command of context.commands) {
 
 The context object returned by the `parseVGM` function, containing parsed data from the VGM file.
 
-- **version**: Version of the VGM file.
-- **loopCount**: Indicates how many times left to loop the playback. _Change this value to `0` to disable loop while playing._
-- **hasLoop**: Indicates whether the VGM file contains loop.
-- **totalSamples**: Total sample count of the VGM file. One sample is 1/44100 seconds.
-- **loopSamples**: Looped sample count of the VGM file. One sample is 1/44100 seconds.
-- **skipUnknownCommand**: Indicates whether to skip unknown commands during parsing.
-- **header**: Generator yielding header information.
-- **metadata**: Generator yielding metadata, or `null` if not present.
-- **commands**: Generator yielding command data.
+- **version**: VGM file version.
+- **loopCount**: Number of times to loop playback. _Change this value to `0` to disable loop while playing._
+- **hasLoop**: Indicates if the file has a loop point.
+- **totalSamples**: Total number of samples in the file. One sample is 1/44100 seconds.
+- **loopSamples**: Number of samples in the loop. One sample is 1/44100 seconds.
+- **skipUnknownCommand**: Skip unknown commands during parsing.
+- **header**: Generator for header information.
+- **extraHeader**: Extra header information, if available.
+- **metadata**: Generator for metadata, or null if not available.
+- **commands**: Generator for command data.
 
 ### `ParseOptions`
 

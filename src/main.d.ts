@@ -1,5 +1,10 @@
 import { TinyVGMHeaderField, TinyVGMMetadataType } from './header'
 
+export interface TinyVGMExtraHeader {
+	clock: Array<{ chipID: number; clk: number }>
+	volume: Array<{ chipID: number; flags: number; relative: boolean; vol: number }>
+}
+
 export interface TinyVGMContext {
 	version: number
 	loopCount: number
@@ -8,6 +13,7 @@ export interface TinyVGMContext {
 	loopSamples: number
 	skipUnknownCommand: boolean
 	header: Generator<{ type: TinyVGMHeaderField; data: number }>
+	extraHeader: TinyVGMExtraHeader | null
 	metadata: Generator<{ type: TinyVGMMetadataType; data: Uint8Array }> | null
 	commands: Generator<{ cmd: number; type?: number; data?: Uint8Array }>
 }

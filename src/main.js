@@ -12,6 +12,7 @@ const HEADER_DAT_OFFSET = TinyVGMHeaderField.Data_Offset * 4
 const HEADER_LOOP_OFFSET = TinyVGMHeaderField.Loop_Offset * 4
 const HEADER_LOOP_SAMPLES = TinyVGMHeaderField.Loop_Samples * 4
 const HEADER_TOTAL_SAMPLES = TinyVGMHeaderField.Total_Samples * 4
+const HEADER_EXTRA_OFFSET = TinyVGMHeaderField.ExtraHeader_Offset * 4
 
 const parseHeader = function *(view, end) {
 	let type = TinyVGMHeaderField.EoF_Offset
@@ -21,6 +22,53 @@ const parseHeader = function *(view, end) {
 		const ret = { type, data }
 		yield ret
 		type += 1
+	}
+}
+
+const parseExtraHeader = function (view, startOffset) {
+	const size = view.getUint32(startOffset, true)
+	const clock = []
+	const volume = []
+
+	if (size >= 8) {
+		const clockRelOffset = view.getUint32(startOffset + 4, true)
+		if (clockRelOffset >= 4) {
+			const count = view.getUint8(startOffset + 4 + clockRelOffset)
+			if (count) {
+				const baseOffset = startOffset + 4 + clockRelOffset + 1
+				for (let i = 0; i < count; i++) {
+					const itemOffset = baseOffset + i * 5
+					const chipID = view.getUint8(itemOffset)
+					const clk = view.getUint32(itemOffset + 1, true)
+					clock.push({ chipID, clk })
+				}
+			}
+		}
+
+		if (size >= 12 && (clockRelOffset && clockRelOffset >= 8) || !clockRelOffset) {
+			const volRelOffset = view.getUint32(startOffset + 8, true)
+			if (volRelOffset >= 4) {
+				const count = view.getUint8(startOffset + 8 + clockRelOffset)
+				if (count) {
+					const baseOffset = startOffset + 8 + clockRelOffset + 1
+					// eslint-disable-next-line max-depth
+					for (let i = 0; i < count; i++) {
+						const itemOffset = baseOffset + i * 4
+						const chipID = view.getUint8(itemOffset)
+						const flags = view.getUint8(itemOffset + 1)
+						const volRaw = view.getUint16(itemOffset + 2, true)
+						const relative = !!(volRaw & 0x8000)
+						const vol = volRaw & 0x7FFF
+						volume.push({ chipID, flags, relative, vol })
+					}
+				}
+			}
+		}
+	}
+
+	return {
+		clock,
+		volume
 	}
 }
 
@@ -206,6 +254,11 @@ export const parseVGM = (buf, options = {}) => {
 		headerSize = Math.floor(commandOffset / 4)
 	}
 
+	let extraHeaderOffset = 0
+	if (version >= 0x00000170 && headerSize > TinyVGMHeaderField.ExtraHeader_Offset) {
+		extraHeaderOffset = vgmView.getUint32(HEADER_EXTRA_OFFSET, true) + HEADER_EXTRA_OFFSET
+	}
+
 	const ctx = {
 		version,
 		loopCount: 0,
@@ -222,6 +275,7 @@ export const parseVGM = (buf, options = {}) => {
 	}
 
 	ctx.header = parseHeader(vgmView, headerSize)
+	ctx.extraHeader = extraHeaderOffset && parseExtraHeader(vgmView, extraHeaderOffset) || null
 	ctx.metadata = gd3Offset && parseMetadata(vgmView, gd3Offset) || null
 	ctx.commands = parseCommands(vgmView, { commandOffset, eofOffset, loopOffset, loopSamples }, ctx)
 

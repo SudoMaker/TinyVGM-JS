@@ -22,6 +22,11 @@ const readVGMFile = (filePath, _loopCount) => {
 				console.log(`Header Field: 0x${(field.type * 4).toString(16).padStart(2, '0')}, Value: 0x${field.data.toString(16).padStart(8, '0')}`)
 			}
 
+			// Displaying extra header information, if available
+			if (context.extraHeader) {
+				console.log('Extra Header:', context.extraHeader)
+			}
+
 			if (context.metadata) {
 				for (const metaField of context.metadata) {
 					const text = new TextDecoder('utf-16le').decode(metaField.data)
