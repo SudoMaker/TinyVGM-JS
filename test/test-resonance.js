@@ -26,12 +26,54 @@ const opl3 = new NukedOPL3()
 //   audioDevice.queue(buf);
 // });
 
+
+const codePointAt = (bytes, idx) => {
+	const codeUnit = bytes[idx] + (bytes[idx + 1] << 8)
+	if (0xd800 <= codeUnit && codeUnit <= 0xdbff && idx + 3 < bytes.length) {
+		const secondCodeUnit = bytes[idx + 2] + (bytes[idx + 3] << 8)
+		if (0xdc00 <= secondCodeUnit && secondCodeUnit <= 0xdfff) {
+			return ((codeUnit - 0xd800) << 10) + secondCodeUnit - 0xdc00 + 0x10000
+		}
+	}
+	return codeUnit
+}
+
+const encodeCodePoint = (codePoint) => {
+	if (codePoint < 0x80) {
+		return String.fromCharCode(codePoint)
+	} else if (codePoint < 0x800) {
+		return String.fromCharCode(0xc0 | (codePoint >> 6), 0x80 | (codePoint & 0x3f))
+	} else if (codePoint < 0x10000) {
+		return String.fromCharCode(0xe0 | (codePoint >> 12), 0x80 | ((codePoint >> 6) & 0x3f), 0x80 | (codePoint & 0x3f))
+	} else {
+		return String.fromCharCode(
+			0xf0 | (codePoint >> 18),
+			0x80 | ((codePoint >> 12) & 0x3f),
+			0x80 | ((codePoint >> 6) & 0x3f),
+			0x80 | (codePoint & 0x3f)
+		)
+	}
+}
+
+const utf16leToUtf8 = (uint8Array) => {
+	let result = ''
+	for (let i = 0; i < uint8Array.length; i += 2) {
+		const codePoint = codePointAt(uint8Array, i)
+		result += encodeCodePoint(codePoint)
+		if (codePoint >= 0x10000) {
+			i += 2
+		}
+	}
+
+	return result
+}
+
 const createSampleConvert = (source, target) => {
 	let sourceSamplesPlayed = 0
 	let targetSamplesPlayed = 0
 	return (srcSampleCount) => {
 		sourceSamplesPlayed += srcSampleCount
-		const newTrgetSamples = Math.round(sourceSamplesPlayed * target / source)
+		const newTrgetSamples = Math.round((sourceSamplesPlayed * target) / source)
 		const diff = newTrgetSamples - targetSamplesPlayed
 		targetSamplesPlayed = newTrgetSamples
 		return diff
@@ -40,19 +82,20 @@ const createSampleConvert = (source, target) => {
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
-const queueSamples = (samples, bufferTime) => new Promise((resolve) => {
-	const queue = () => {
-		if (audioDevice.getQueuedSize() < (49716 * 4) / 1000 * bufferTime) {
-			audioDevice.queue(samples)
-			resolve()
-		} else {
-			setTimeout(queue, bufferTime / 3)
-			gc()
+const queueSamples = (samples, bufferTime) =>
+	new Promise((resolve) => {
+		const queue = () => {
+			if (audioDevice.getQueuedSize() < ((49716 * 4) / 1000) * bufferTime) {
+				audioDevice.queue(samples)
+				resolve()
+			} else {
+				setTimeout(queue, bufferTime / 3)
+				gc()
+			}
 		}
-	}
 
-	queue()
-})
+		queue()
+	})
 
 const playCommands = async (commands, bufferTime) => {
 	const sampleConvert = createSampleConvert(44100, 49716)
@@ -141,20 +184,19 @@ const readVGMFile = (filePath, _loopCount, bufferTime) => {
 
 			if (context.metadata) {
 				for (const metaField of context.metadata) {
-					console.log(`Metadata Type: 0x${metaField.type.toString(16).padStart(2, '0')}, Value`, metaField.data)
+					console.log(`Metadata Type: 0x${metaField.type.toString(16).padStart(2, '0')}, Value: ${utf16leToUtf8(metaField.data)}`)
 				}
 			}
 
 			playCommands(context.commands, bufferTime)
-			.then(() => {
-				console.log('Done playing.')
-			})
-			.then(sleep(bufferTime * 2))
-			.finally(() => {
-				// eslint-disable-next-line no-process-exit
-				process.exit(0)
-			})
-
+				.then(() => {
+					console.log('Done playing.')
+				})
+				.then(sleep(bufferTime * 2))
+				.finally(() => {
+					// eslint-disable-next-line no-process-exit
+					process.exit(0)
+				})
 		} catch (parseError) {
 			console.error('Error parsing VGM file:', parseError)
 		}
@@ -178,4 +220,4 @@ process.on('SIGINT', () => {
 	process.exit(0)
 })
 
-setInterval(_ => _, 1000)
+setInterval((_) => _, 1000)
