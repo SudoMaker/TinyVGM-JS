@@ -59,10 +59,12 @@ The context object returned by the `parseVGM` function, containing parsed data f
 - **totalSamples**: Total number of samples in the file. One sample is 1/44100 seconds.
 - **loopSamples**: Number of samples in the loop. One sample is 1/44100 seconds.
 - **skipUnknownCommand**: Skip unknown commands during parsing.
-- **header**: Generator for header information.
-- **extraHeader**: Extra header information, if available.
-- **metadata**: Generator for metadata, or null if not available.
-- **commands**: Generator for command data.
+- **header**: Function that returns a generator for header information.
+- **extraHeader**: Function that returns extra header information, if available.
+- **metadata**: Function that returns a generator for metadata, if available.
+- **commands**: Function that returns a generator for command data, accepting an optional loops parameter to set the number of loops.
+- **samplesPlayed**: Number of samples played so far.
+- **loopSamplesPlayed**: Number of loop samples played in the current loop.
 - **onLoop**: Function called when a loop point is reached, with the remaining loop count as a parameter.
 
 
@@ -115,7 +117,7 @@ import { parseVGM } from 'tinyvgm'
 // Load your VGM file into an ArrayBuffer `vgmBuffer`
 const { header } = parseVGM(vgmBuffer)
 
-for (const field of header) {
+for (const field of header()) {
 	console.log(`Header Field: ${field.type}, Value: ${field.data}`)
 }
 ```
@@ -134,7 +136,7 @@ const { metadata } = parseVGM(vgmBuffer)
 if (metadata) {
 	const decoder = new TextDecoder('utf-16le')
 
-	for (const metaField of metadata) {
+	for (const metaField of metadata()) {
 		// Convert Uint8Array to a UTF-16 encoded string
 		const text = decoder.decode(metaField.data)
 		console.log(`Metadata Type: ${metaField.type}, Value: ${text}`)
@@ -153,7 +155,7 @@ import { parseVGM } from 'tinyvgm'
 
 const { commands } = parseVGM(vgmBuffer)
 
-for (const command of commands) {
+for (const command of commands()) {
 	if (command.cmd === 0x67) {
 		// Handling a data block
 		console.log(`Data Block Detected`)

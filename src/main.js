@@ -115,17 +115,17 @@ const parseMetadata = function *(view, startOffset) {
 const parseCommands = function *(view, { commandOffset, eofOffset, totalSamples, loopOffset, loopSamples }, ctx) {
 	let cursor = commandOffset
 
-	let playedSamples = 0
-	let playedLoopSamples = 0
+	let samplesPlayed = 0
+	let loopSamplesPlayed = 0
 
-	while (cursor < eofOffset && playedSamples < totalSamples) {
+	while (cursor < eofOffset && samplesPlayed < totalSamples) {
 		const cmd = view.getUint8(cursor)
 		if (cmd === 0x66) return
 
 		const cmdLength = VGM_CMD_LENGTH_TABLE[cmd]
 
 		if (cmdLength === -1) {
-			console.log('play', playedSamples, playedLoopSamples, loopSamples)
+			console.log('play', samplesPlayed, loopSamplesPlayed, loopSamples)
 			const errorMsg = `Unknown VGM command 0x${cmd.toString(16).padStart(2, '0')} at 0x${cursor.toString(16)}`
 			if (ctx.skipUnknownCommand) {
 				cursor += 1
@@ -170,8 +170,6 @@ const parseCommands = function *(view, { commandOffset, eofOffset, totalSamples,
 				cursor += 1
 			}
 
-			yield ret
-
 			let sampleIncrement = 0
 			switch (cmd) {
 				case 0x61: {
@@ -195,14 +193,16 @@ const parseCommands = function *(view, { commandOffset, eofOffset, totalSamples,
 			}
 
 			if (sampleIncrement) {
-				playedSamples += sampleIncrement
+				samplesPlayed += sampleIncrement
+
+				ret.sampleIncrement = sampleIncrement
 
 				if (loopSamples && _cursor >= loopOffset) {
-					playedLoopSamples += sampleIncrement
+					loopSamplesPlayed += sampleIncrement
 					// eslint-disable-next-line max-depth
-					if (ctx.loopCount > 0 && playedLoopSamples >= loopSamples && loopSamples) {
-						playedSamples -= playedLoopSamples
-						playedLoopSamples = 0
+					if (ctx.loopCount > 0 && loopSamplesPlayed >= loopSamples && loopSamples) {
+						samplesPlayed -= loopSamplesPlayed
+						loopSamplesPlayed = 0
 						cursor = loopOffset
 						ctx.loopCount -= 1
 						// eslint-disable-next-line max-depth
@@ -210,6 +210,11 @@ const parseCommands = function *(view, { commandOffset, eofOffset, totalSamples,
 					}
 				}
 			}
+
+			ctx.samplesPlayed = samplesPlayed
+			ctx.loopSamplesPlayed = loopSamplesPlayed
+
+			yield ret
 
 		}
 	}
@@ -253,6 +258,8 @@ export const parseVGM = (buf, options = {}) => {
 	// Handle malformed loop offset for files from some VGM generators
 	if (loopOffset >= eofOffset) loopOffset = 0
 
+	const hasLoop = loopOffset - HEADER_LOOP_OFFSET > 0
+
 	let loopSamples = vgmView.getUint32(HEADER_LOOP_SAMPLES, true)
 
 	let commandOffset = 0x40
@@ -274,16 +281,18 @@ export const parseVGM = (buf, options = {}) => {
 	const ctx = {
 		version,
 		loopCount: 0,
-		hasLoop: !!loopOffset,
+		hasLoop,
 		totalSamples,
 		loopSamples,
+		samplesPlayed: 0,
+		loopSamplesPlayed: 0,
 		skipUnknownCommand: false,
 		...options
 	}
 
 	// Invalid or no loop
 	if (loopOffset < commandOffset) {
-		if (loopOffset) console.log('Invalid loop offset! Changing to data offset...')
+		if (hasLoop) console.log(`Invalid loop offset 0x${loopOffset.toString(16)}! Changing to data offset...`)
 		loopOffset = commandOffset
 		loopSamples = totalSamples
 	}
@@ -292,10 +301,13 @@ export const parseVGM = (buf, options = {}) => {
 		loopSamples = totalSamples
 	}
 
-	ctx.header = parseHeader(vgmView, headerSize)
-	ctx.extraHeader = extraHeaderOffset && parseExtraHeader(vgmView, extraHeaderOffset) || null
-	ctx.metadata = gd3Offset && parseMetadata(vgmView, gd3Offset) || null
-	ctx.commands = parseCommands(vgmView, { commandOffset, eofOffset, totalSamples, loopOffset, loopSamples }, ctx)
+	ctx.header = () => parseHeader(vgmView, headerSize)
+	ctx.extraHeader = extraHeaderOffset && (() => parseExtraHeader(vgmView, extraHeaderOffset)) || null
+	ctx.metadata = gd3Offset && (() => parseMetadata(vgmView, gd3Offset)) || null
+	ctx.commands = (loops = ctx.loopCount) => {
+		ctx.loopCount = loops
+		return parseCommands(vgmView, { commandOffset, eofOffset, totalSamples, loopOffset, loopSamples }, ctx)
+	}
 
 	return ctx
 }

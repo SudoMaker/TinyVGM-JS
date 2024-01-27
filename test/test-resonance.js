@@ -26,7 +26,6 @@ const opl3 = new NukedOPL3()
 //   audioDevice.queue(buf);
 // });
 
-
 const codePointAt = (bytes, idx) => {
 	const codeUnit = bytes[idx] + (bytes[idx + 1] << 8)
 	if (0xd800 <= codeUnit && codeUnit <= 0xdbff && idx + 3 < bytes.length) {
@@ -99,8 +98,7 @@ const queueSamples = (samples, bufferTime) =>
 
 const playCommands = async (commands, bufferTime) => {
 	const sampleConvert = createSampleConvert(44100, 49716)
-	for (const command of commands) {
-		let newSamples = 0
+	for (const command of commands()) {
 		switch (command.cmd) {
 			case 0x5a:
 			case 0x5e:
@@ -109,30 +107,19 @@ const playCommands = async (commands, bufferTime) => {
 			case 0x5f:
 				opl3.writeRegBuffered(command.data[0] | 0x100, command.data[1])
 				break
-			case 0x61:
-				newSamples = command.data[0] | (command.data[1] << 8)
-				break
-			case 0x62:
-				newSamples = 735
-				break
-			case 0x63:
-				newSamples = 882
-				break
 			default:
-				// eslint-disable-next-line max-depth
-				if (command.cmd >= 0x70 && command.cmd < 0x80) {
-					newSamples = (command.cmd & 0xf) + 1
-				}
 		}
 
-		if (newSamples) {
+		if (command.sampleIncrement) {
+			// console.log('Increase samples:', command.sampleIncrement)
 			// resampler.write(opl3.generateStream(sampleConvert(newSamples)));
-			await queueSamples(opl3.generateStream(sampleConvert(newSamples)), bufferTime)
+			await queueSamples(opl3.generateStream(sampleConvert(command.sampleIncrement)), bufferTime)
 		}
 		// console.log(
 		// 	`Command: 0x${command.cmd.toString(16).padStart(2, '0')} Data:`,
 		// 	command.data && [...command.data].map((i) => `0x${i.toString(16).padStart(2, '0')}`).join(' ')
 		// )
+		//
 	}
 
 	while (audioDevice.getQueuedSize() > 0) {
@@ -170,7 +157,7 @@ const readVGMFile = (filePath, _loopCount, bufferTime) => {
 				loopSamples
 			})
 
-			for (const field of context.header) {
+			for (const field of context.header()) {
 				console.log(
 					`Header Field: 0x${(field.type * 4).toString(16).padStart(2, '0')}, Value: 0x${field.data
 						.toString(16)
@@ -179,12 +166,14 @@ const readVGMFile = (filePath, _loopCount, bufferTime) => {
 			}
 
 			if (context.extraHeader) {
-				console.log('Extra Header:', context.extraHeader)
+				console.log('Extra Header:', context.extraHeader())
 			}
 
 			if (context.metadata) {
-				for (const metaField of context.metadata) {
-					console.log(`Metadata Type: 0x${metaField.type.toString(16).padStart(2, '0')}, Value: ${utf16leToUtf8(metaField.data)}`)
+				for (const metaField of context.metadata()) {
+					console.log(
+						`Metadata Type: 0x${metaField.type.toString(16).padStart(2, '0')}, Value: ${utf16leToUtf8(metaField.data)}`
+					)
 				}
 			}
 

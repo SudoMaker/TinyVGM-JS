@@ -11,12 +11,14 @@ export interface TinyVGMContext {
 	hasLoop: boolean
 	totalSamples: number
 	loopSamples: number
+	samplesPlayed: number
+	loopSamplesPlayed: number
 	skipUnknownCommand: boolean
 	onLoop?: (remainingLoops: number) => void
-	header: Generator<{ type: TinyVGMHeaderField; data: number }>
-	extraHeader: TinyVGMExtraHeader | null
-	metadata: Generator<{ type: TinyVGMMetadataType; data: Uint8Array }> | null
-	commands: Generator<{ cmd: number; type?: number; data?: Uint8Array }>
+	header: () => Generator<{ type: TinyVGMHeaderField; data: number }>
+	extraHeader: (() => TinyVGMExtraHeader) | null
+	metadata: () => Generator<{ type: TinyVGMMetadataType; data: Uint8Array }> | null
+	commands: (loops?: number) => Generator<{ cmd: number; type?: number; data?: Uint8Array; sampleIncrement?: number }>
 }
 
 export interface ParseOptions {

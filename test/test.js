@@ -32,7 +32,7 @@ const readVGMFile = (filePath, _loopCount) => {
 			})
 
 			// Example: Displaying header information
-			for (const field of context.header) {
+			for (const field of context.header()) {
 				console.log(
 					`Header Field: 0x${(field.type * 4).toString(16).padStart(2, '0')}, Value: 0x${field.data
 						.toString(16)
@@ -42,17 +42,17 @@ const readVGMFile = (filePath, _loopCount) => {
 
 			// Displaying extra header information, if available
 			if (context.extraHeader) {
-				console.log('Extra Header:', context.extraHeader)
+				console.log('Extra Header:', context.extraHeader())
 			}
 
 			if (context.metadata) {
-				for (const metaField of context.metadata) {
+				for (const metaField of context.metadata()) {
 					const text = new TextDecoder('utf-16le').decode(metaField.data)
 					console.log(`Metadata Type: 0x${metaField.type.toString(16).padStart(2, '0')}, Value: ${text}`)
 				}
 			}
 
-			for (const command of context.commands) {
+			for (const command of context.commands()) {
 				if (command.cmd === 0x67) {
 					console.log(`DataBlock: 0x${command.type.toString(16).padStart(2, '0')}`, command.data)
 				} else {
@@ -60,6 +60,9 @@ const readVGMFile = (filePath, _loopCount) => {
 						`Command: 0x${command.cmd.toString(16).padStart(2, '0')} Data:`,
 						command.data && [...command.data].map((i) => `0x${i.toString(16).padStart(2, '0')}`).join(' ')
 					)
+					if (command.sampleIncrement) {
+						console.log('Increase samples:', command.sampleIncrement)
+					}
 				}
 			}
 
