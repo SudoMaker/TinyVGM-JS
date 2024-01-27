@@ -112,18 +112,20 @@ const parseMetadata = function *(view, startOffset) {
 }
 
 // eslint-disable-next-line complexity
-const parseCommands = function *(view, { commandOffset, eofOffset, loopOffset, loopSamples }, ctx) {
+const parseCommands = function *(view, { commandOffset, eofOffset, totalSamples, loopOffset, loopSamples }, ctx) {
 	let cursor = commandOffset
 
-	let loopSamplesCount = 0
+	let playedSamples = 0
+	let playedLoopSamples = 0
 
-	while (cursor < eofOffset) {
+	while (cursor < eofOffset && playedSamples < totalSamples) {
 		const cmd = view.getUint8(cursor)
 		if (cmd === 0x66) return
 
 		const cmdLength = VGM_CMD_LENGTH_TABLE[cmd]
 
 		if (cmdLength === -1) {
+			console.log('play', playedSamples, playedLoopSamples, loopSamples)
 			const errorMsg = `Unknown VGM command 0x${cmd.toString(16).padStart(2, '0')} at 0x${cursor.toString(16)}`
 			if (ctx.skipUnknownCommand) {
 				cursor += 1
@@ -170,32 +172,37 @@ const parseCommands = function *(view, { commandOffset, eofOffset, loopOffset, l
 
 			yield ret
 
-			if (loopSamples && _cursor >= loopOffset) {
-				switch (cmd) {
-					case 0x61: {
-						loopSamplesCount += ret.data[0] | (ret.data[1] << 8)
-						break
-					}
-					case 0x62: {
-						loopSamplesCount += 735
-						break
-					}
-					case 0x63: {
-						loopSamplesCount += 882
-						break
-					}
-					default: {
-						// eslint-disable-next-line max-depth
-						if (cmd >= 0x70 && cmd < 0x90) {
-							loopSamplesCount += (cmd & 0x0F) + 1
-						}
+			let sampleIncrement = 0
+			switch (cmd) {
+				case 0x61: {
+					sampleIncrement = ret.data[0] | (ret.data[1] << 8)
+					break
+				}
+				case 0x62: {
+					sampleIncrement = 735
+					break
+				}
+				case 0x63: {
+					sampleIncrement = 882
+					break
+				}
+				default: {
+					// eslint-disable-next-line max-depth
+					if (cmd >= 0x70 && cmd < 0x90) {
+						sampleIncrement = (cmd & 0x0F) + 1
 					}
 				}
+			}
 
-				if (loopSamplesCount >= loopSamples) {
-					loopSamplesCount = 0
+			if (sampleIncrement) {
+				playedSamples += sampleIncrement
+
+				if (loopSamples && _cursor >= loopOffset) {
+					playedLoopSamples += sampleIncrement
 					// eslint-disable-next-line max-depth
-					if (ctx.loopCount > 0) {
+					if (ctx.loopCount > 0 && playedLoopSamples >= loopSamples && loopSamples) {
+						playedSamples -= playedLoopSamples
+						playedLoopSamples = 0
 						cursor = loopOffset
 						ctx.loopCount -= 1
 						// eslint-disable-next-line max-depth
@@ -203,6 +210,7 @@ const parseCommands = function *(view, { commandOffset, eofOffset, loopOffset, l
 					}
 				}
 			}
+
 		}
 	}
 }
@@ -287,7 +295,7 @@ export const parseVGM = (buf, options = {}) => {
 	ctx.header = parseHeader(vgmView, headerSize)
 	ctx.extraHeader = extraHeaderOffset && parseExtraHeader(vgmView, extraHeaderOffset) || null
 	ctx.metadata = gd3Offset && parseMetadata(vgmView, gd3Offset) || null
-	ctx.commands = parseCommands(vgmView, { commandOffset, eofOffset, loopOffset, loopSamples }, ctx)
+	ctx.commands = parseCommands(vgmView, { commandOffset, eofOffset, totalSamples, loopOffset, loopSamples }, ctx)
 
 	return ctx
 }
