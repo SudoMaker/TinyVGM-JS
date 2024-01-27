@@ -26,24 +26,36 @@ const opl3 = new NukedOPL3()
 //   audioDevice.queue(buf);
 // });
 
-const sampleConvert = (srcSampleCount) => Math.round((srcSampleCount / 44100) * 49716)
+const createSampleConvert = (source, target) => {
+	let sourceSamplesPlayed = 0
+	let targetSamplesPlayed = 0
+	return (srcSampleCount) => {
+		sourceSamplesPlayed += srcSampleCount
+		const newTrgetSamples = Math.round(sourceSamplesPlayed * target / source)
+		const diff = newTrgetSamples - targetSamplesPlayed
+		targetSamplesPlayed = newTrgetSamples
+		return diff
+	}
+}
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
-const queueSamples = (samples) => new Promise((resolve) => {
+const queueSamples = (samples, bufferTime) => new Promise((resolve) => {
 	const queue = () => {
-		if (audioDevice.getQueuedSize() < (49716 * 4) / 1000 * 100) {
+		if (audioDevice.getQueuedSize() < (49716 * 4) / 1000 * bufferTime) {
 			audioDevice.queue(samples)
 			resolve()
 		} else {
-			setTimeout(queue, 50)
+			setTimeout(queue, bufferTime / 3)
+			gc()
 		}
 	}
 
 	queue()
 })
 
-const playCommands = async (commands) => {
+const playCommands = async (commands, bufferTime) => {
+	const sampleConvert = createSampleConvert(44100, 49716)
 	for (const command of commands) {
 		let newSamples = 0
 		switch (command.cmd) {
@@ -72,7 +84,7 @@ const playCommands = async (commands) => {
 
 		if (newSamples) {
 			// resampler.write(opl3.generateStream(sampleConvert(newSamples)));
-			await queueSamples(opl3.generateStream(sampleConvert(newSamples)))
+			await queueSamples(opl3.generateStream(sampleConvert(newSamples)), bufferTime)
 		}
 		// console.log(
 		// 	`Command: 0x${command.cmd.toString(16).padStart(2, '0')} Data:`,
@@ -85,7 +97,7 @@ const playCommands = async (commands) => {
 	}
 }
 
-const readVGMFile = (filePath, _loopCount) => {
+const readVGMFile = (filePath, _loopCount, bufferTime) => {
 	// eslint-disable-next-line complexity
 	fs.readFile(filePath, (err, buffer) => {
 		if (err) {
@@ -100,6 +112,7 @@ const readVGMFile = (filePath, _loopCount) => {
 		try {
 			const context = parseVGM(buffer, {
 				loopCount: _loopCount,
+				skipUnknownCommand: true,
 				onLoop(count) {
 					console.log('Looped! Loops left:', count)
 				}
@@ -132,9 +145,12 @@ const readVGMFile = (filePath, _loopCount) => {
 				}
 			}
 
-			playCommands(context.commands)
+			playCommands(context.commands, bufferTime)
 			.then(() => {
 				console.log('Done playing.')
+			})
+			.then(sleep(bufferTime * 2))
+			.finally(() => {
 				// eslint-disable-next-line no-process-exit
 				process.exit(0)
 			})
@@ -149,11 +165,12 @@ const readVGMFile = (filePath, _loopCount) => {
 const args = process.argv.slice(2)
 
 if (args.length === 0) {
-	console.log(`Usage: resonance ${process.argv[1]} <path-to-opl3-vgm-file> [loop-count]`)
+	console.log(`Usage: resonance ${process.argv[1]} <path-to-opl3-vgm-file> [loop-count] [buffer-ms]`)
 } else {
 	const filePath = args[0]
 	const loopCount = args[1]
-	readVGMFile(filePath, (loopCount === 'Infinity' && Infinity) || parseInt(loopCount, 10) || 0)
+	const bufferTime = args[2]
+	readVGMFile(filePath, (loopCount < 0 && Infinity) || parseInt(loopCount, 10) || 0, parseInt(bufferTime, 10) || 100)
 }
 
 process.on('SIGINT', () => {

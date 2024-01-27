@@ -15,7 +15,7 @@ const HEADER_TOTAL_SAMPLES = TinyVGMHeaderField.Total_Samples * 4
 const HEADER_EXTRA_OFFSET = TinyVGMHeaderField.ExtraHeader_Offset * 4
 
 const parseHeader = function *(view, end) {
-	let type = TinyVGMHeaderField.EoF_Offset
+	let type = TinyVGMHeaderField.Identity
 
 	while (type < end) {
 		const data = view.getUint32(type * 4, true)
@@ -124,7 +124,7 @@ const parseCommands = function *(view, { commandOffset, eofOffset, loopOffset, l
 		const cmdLength = VGM_CMD_LENGTH_TABLE[cmd]
 
 		if (cmdLength === -1) {
-			const errorMsg = `Unknown VGM command 0x${cmd.toString(16).padStart(2, '0')}`
+			const errorMsg = `Unknown VGM command 0x${cmd.toString(16).padStart(2, '0')} at 0x${cursor.toString(16)}`
 			if (ctx.skipUnknownCommand) {
 				cursor += 1
 				console.log(`${errorMsg}, skipped`)
@@ -139,16 +139,16 @@ const parseCommands = function *(view, { commandOffset, eofOffset, loopOffset, l
 		const _cursor = cursor
 
 		if (cmd === 0x67) {
-			cursor += 6
+			cursor += 7
 			if (cursor >= eofOffset) throw new RangeError('Unexpected end of VGM datablock')
 
-			const type = view.getUint8(cursor - 4)
-			const dataLength = view.getUint32(cursor - 3, true)
+			const type = view.getUint8(cursor - 5)
+			const dataLength = view.getUint32(cursor - 4, true)
 
 			const cursorNext = cursor + dataLength
 			if (cursorNext >= eofOffset) throw new RangeError('Unexpected end of VGM datablock')
 
-			const data = new Uint8Array(view.buffer, _cursor, dataLength + 6)
+			const data = new Uint8Array(view.buffer, _cursor, dataLength + 7)
 
 			const ret = { cmd, type, data }
 			yield ret
@@ -167,6 +167,8 @@ const parseCommands = function *(view, { commandOffset, eofOffset, loopOffset, l
 			} else {
 				cursor += 1
 			}
+
+			yield ret
 
 			if (loopSamples && _cursor >= loopOffset) {
 				switch (cmd) {
@@ -201,8 +203,6 @@ const parseCommands = function *(view, { commandOffset, eofOffset, loopOffset, l
 					}
 				}
 			}
-
-			yield ret
 		}
 	}
 }
@@ -273,8 +273,14 @@ export const parseVGM = (buf, options = {}) => {
 		...options
 	}
 
-	if (!loopOffset) {
+	// Invalid or no loop
+	if (loopOffset < commandOffset) {
+		if (loopOffset) console.log('Invalid loop offset! Changing to data offset...')
 		loopOffset = commandOffset
+		loopSamples = totalSamples
+	}
+
+	if (!loopSamples) {
 		loopSamples = totalSamples
 	}
 

@@ -56,10 +56,10 @@ const readVGMFile = (filePath, _loopCount) => {
 				if (command.cmd === 0x67) {
 					console.log(`DataBlock: 0x${command.type.toString(16).padStart(2, '0')}`, command.data)
 				} else {
-					// console.log(
-					// 	`Command: 0x${command.cmd.toString(16).padStart(2, '0')} Data:`,
-					// 	command.data && [...command.data].map((i) => `0x${i.toString(16).padStart(2, '0')}`).join(' ')
-					// )
+					console.log(
+						`Command: 0x${command.cmd.toString(16).padStart(2, '0')} Data:`,
+						command.data && [...command.data].map((i) => `0x${i.toString(16).padStart(2, '0')}`).join(' ')
+					)
 				}
 			}
 
