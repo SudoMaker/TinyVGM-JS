@@ -27,6 +27,8 @@ export interface ParseOptions {
 	onLoop?: (remainingLoops: number) => void
 }
 
+export function setPrint(fn: (msg: string) => void): void;
+
 export function parseVGM(buf: ArrayBuffer | DataView, options?: ParseOptions): TinyVGMContext
 
 export * from './header'

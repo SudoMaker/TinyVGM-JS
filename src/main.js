@@ -14,6 +14,11 @@ const HEADER_LOOP_SAMPLES = TinyVGMHeaderField.Loop_Samples * 4
 const HEADER_TOTAL_SAMPLES = TinyVGMHeaderField.Total_Samples * 4
 const HEADER_EXTRA_OFFSET = TinyVGMHeaderField.ExtraHeader_Offset * 4
 
+let _print = (msg) => console.log(msg)
+export const setPrint = (fn) => {
+	_print = fn
+}
+
 const parseHeader = function *(view, end) {
 	let type = TinyVGMHeaderField.Identity
 
@@ -81,7 +86,7 @@ const parseMetadata = function *(view, startOffset) {
 	cursor += 4
 
 	const version = view.getUint32(cursor, true)
-	console.log(`GD3 version: 0x${version.toString(16).padStart(8, '0')}`)
+	_print(`GD3 version: 0x${version.toString(16).padStart(8, '0')}`)
 	cursor += 4
 
 	const length = view.getUint32(cursor, true)
@@ -125,11 +130,11 @@ const parseCommands = function *(view, { commandOffset, eofOffset, totalSamples,
 		const cmdLength = VGM_CMD_LENGTH_TABLE[cmd]
 
 		if (cmdLength === -1) {
-			console.log('play', samplesPlayed, loopSamplesPlayed, loopSamples)
+			_print('play', samplesPlayed, loopSamplesPlayed, loopSamples)
 			const errorMsg = `Unknown VGM command 0x${cmd.toString(16).padStart(2, '0')} at 0x${cursor.toString(16)}`
 			if (ctx.skipUnknownCommand) {
 				cursor += 1
-				console.log(`${errorMsg}, skipped`)
+				_print(`${errorMsg}, skipped`)
 				// eslint-disable-next-line no-continue
 				continue
 			} else {
@@ -292,7 +297,7 @@ export const parseVGM = (buf, options = {}) => {
 
 	// Invalid or no loop
 	if (loopOffset < commandOffset) {
-		if (hasLoop) console.log(`Invalid loop offset 0x${loopOffset.toString(16)}! Changing to data offset...`)
+		if (hasLoop) _print(`Invalid loop offset 0x${loopOffset.toString(16)}! Changing to data offset...`)
 		loopOffset = commandOffset
 		loopSamples = totalSamples
 	}
