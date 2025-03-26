@@ -1,9 +1,6 @@
-export class Enum {
-	constructor();
-	add(key: string, id?: number): this;
-	[K in keyof Omit<Enum, 'add'>]: number;
-}
-
+export type Enum = {
+	add(key: string, id?: number): Enum;
+} & Omit<{ [key: string]: number }, 'add'>;
 
 export const VGM_CMD_LENGTH_TABLE: number[];
 
